@@ -1,5 +1,59 @@
---- SCRIPT TO UPDATE ALL CONFIGURATION FOR CER
---- UPDATE REGISTRATION TYPES
+-- PARTICIPANT TYPES
+
+declare @metaParticipantTypes table (
+  participant_type_id int, 
+  key_name varchar(50), 
+  name_fr varchar(50), 
+  name_nl varchar(50)
+)
+
+insert into @metaParticipantTypes(participant_type_id, key_name, name_fr, name_nl)
+values
+(1,	'belgian-study-participant',	'Etude belge',	'Belgische studie'),
+(2,	'foreign-study-participant',	'Etude étrangère',	'Buitenlandse studie'),
+(3,	'private-person-participant',	'Personne privée', 	'Privépersoon / particulier'),
+(4,	'bailiff-participant',	'Huissier de justice', 'Gerechtsdeurwaarder'),
+(5,	'court-participant',	'Tribunal',	'Rechtscollege'),
+(6,	'fodfin-participant',	'SPF Finances',	'FOD Financiën'),
+(7,	'legal-person-participant',	'Autre entité juridique',	'Andere rechtspersoon'),
+(8,	'fednot-admin-participant',	'Fednot Service Support',	'Fednot steundienst'),
+(9,	'arert-participant',	'ARERT',	'ARERT'),
+(10,	'public-government-participant',	'Gouvernement ou institution publique',	'Openbare overheid of instelling')
+
+insert into crt.participant_type(participant_type_id, key_name, name_fr, name_nl)
+select participant_type_id, key_name, name_fr, name_nl 
+from @metaParticipantTypes
+where participant_type_id not in (select participant_type_id from crt.participant_type)
+
+update crt.participant_type 
+set key_name = m.key_name, name_fr = m.name_fr, name_nl = m.name_nl
+from crt.participant_type pt
+inner join @metaParticipantTypes m
+	on m.participant_type_id = pt.participant_type_id
+
+-- DOSSIER CONTEXTS
+
+declare @metaDossierContexts as table(
+	dossier_context_id int, 
+	key_name varchar(50), 
+	name_fr varchar(50), 
+	name_nl varchar(50), 
+	apply_gdpr_shielding tinyint, 
+	allow_manual_selection tinyint)
+insert into @metaDossierContexts(dossier_context_id, key_name, name_fr, name_nl, apply_gdpr_shielding, allow_manual_selection)
+values
+(1,	'FAMILY_SUCCESSION',	'Planification successorale familiale',	'Familiale vermogensplanning',	1,	1),
+(2,	'LIQUIDATION_OF_LEGACY',	'Consultation générale',	'Algemene consultatie',	1,	1),
+(3,	'PROVEN_IMPORTANCE',	'Importance démontrée',	'Aangetoond belang',	1,	1),
+(4,	'EXTENDED_SEARCH',	'Autorisation pour une consultation approfondie',	'Machtiging tot uitgebreide opzoeking',	0,	1),
+(5,	'PERSONAL_RIGHT_OF_INSPECTION',	'Droit personnel',	'Persoonlijk inzagerecht',	1,	1),
+(6,	'OFFICE_SPECIFIC_ACCESS',	'Accès spécifique au bureau',	'Ambtspecifieke toegang',	1,	1),
+(7,	NULL,	'ARERT Consultation wills',	'ARERT Consultation wills',	1,	1),
+(8, NULL, 'Fodfin - importance démontrée', 'Fodfin - Aangetood belang', 1, 1)
+
+
+
+-- LEGAL ACT TYPES
 
 declare @metaRegistrationTypes table (
 	registration_type_id int,
@@ -141,5 +195,4 @@ delete from crt.participant_type_registration_type
 insert into crt.participant_type_registration_type(participant_type_id, registration_type_id)
 select participant_type_id, registration_type_id
 from @metaRegistrantLegalActTypes
-
 
