@@ -1,4 +1,36 @@
--- PARTICIPANT TYPES
+------------------------------------------------------------------------------------------------
+--                                                                                            --
+-- REGISTERS                                                                                  --
+--                                                                                            --
+------------------------------------------------------------------------------------------------
+declare @metaRegisters table(
+  register_type_id int,
+  register_name varchar(20),
+  short_name_nl varchar(3),
+  short_name_fr varchar(3),
+  name_nl 
+
+
+select *
+from crt.register_type
+
+
+
+select *
+from crt.registration_type
+
+
+
+------------------------------------------------------------------------------------------------
+--                                                                                            --
+-- PARTICIPANT TYPES                                                                          --
+--                                                                                            --
+-- Each stakeholder to CRF is known as being of a specific participant type.                  --
+-- Participant types determine:                                                               --
+--  - what you can register                                                                   --
+--  - what dossier contexts can be used                                                       --
+--                                                                                            --
+------------------------------------------------------------------------------------------------
 
 declare @metaParticipantTypes table (
   participant_type_id int, 
@@ -18,7 +50,7 @@ values
 (7,	'legal-person-participant',	'Autre entité juridique',	'Andere rechtspersoon'),
 (8,	'fednot-admin-participant',	'Fednot Service Support',	'Fednot steundienst'),
 (9,	'arert-participant',	'ARERT',	'ARERT'),
-(10,	'public-government-participant',	'Gouvernement ou institution publique',	'Openbare overheid of instelling')
+(10,'public-government-participant',	'Gouvernement ou institution publique',	'Openbare overheid of instelling')
 
 insert into crt.participant_type(participant_type_id, key_name, name_fr, name_nl)
 select participant_type_id, key_name, name_fr, name_nl 
@@ -31,7 +63,11 @@ from crt.participant_type pt
 inner join @metaParticipantTypes m
 	on m.participant_type_id = pt.participant_type_id
 
--- DOSSIER CONTEXTS
+------------------------------------------------------------------------------------------------
+--                                                                                            --
+-- DOSSIER CONTEXTS                                                                           --
+--                                                                                            --
+------------------------------------------------------------------------------------------------
 
 declare @metaDossierContexts as table(
 	dossier_context_id int, 
@@ -49,8 +85,146 @@ values
 (5,	'PERSONAL_RIGHT_OF_INSPECTION',	'Droit personnel',	'Persoonlijk inzagerecht',	1,	1),
 (6,	'OFFICE_SPECIFIC_ACCESS',	'Accès spécifique au bureau',	'Ambtspecifieke toegang',	1,	1),
 (7,	NULL,	'ARERT Consultation wills',	'ARERT Consultation wills',	1,	1),
-(8, NULL, 'Fodfin - importance démontrée', 'Fodfin - Aangetood belang', 1, 1)
+(8, NULL, 'Fodfin - importance démontrée', 'Fodfin - Aangetoond belang', 1, 1),
+(100, NULL, 'eRegistration', 'eRegistration', 1, 0)
 
+insert into crt.dossier_context(dossier_context_id, key_name, name_fr, name_nl, apply_gdpr_shielding, allow_manual_selection)
+select dossier_context_id, key_name, name_fr, name_nl, apply_gdpr_shielding, allow_manual_selection 
+from @metaDossierContexts
+where dossier_context_id not in (select dossier_context_id from crt.dossier_context)
+
+update crt.dossier_context 
+set key_name = m.key_name, name_fr = m.name_fr, name_nl = m.name_nl, apply_gdpr_shielding = m.apply_gdpr_shielding, allow_manual_selection = m.allow_manual_selection
+from crt.dossier_context dc
+inner join @metaDossierContexts m
+	on m.dossier_context_id = dc.dossier_context_id
+
+
+------------------------------------------------------------------------------------------------
+--                                                                                            --
+-- PARTICIPANT_TYPE_DOSSIER_CONTEXT                                                                       --
+--                                                                                            --
+------------------------------------------------------------------------------------------------
+
+declare @metaParticipantTypeDossierContexts table(
+  participant_type_id int,
+  dossier_context_id int
+)
+
+insert into @metaParticipantTypeDossierContexts(participant_type_id, dossier_context_id)
+values(1, 2), -- Belgian study - General consultation
+(1, 100),     -- Belgian study - eRegistration (not visible in ui)
+(2, 2),       -- Foreign study - general consultation
+(3, 5),       -- Private person - Personal right of inspection
+(4, 3),       -- Bailiff - proven importance
+(5, 3),       -- Court - proven importance
+(5, 4),       -- Court - extended search
+(6, 8),       -- fodfin - fodfin-proven importance (special context for fodfin)
+(7, 3),       -- other legal person - proven importance
+(8,4),        -- fednot support - extended search
+(9,7),        -- arert - arert consultation wills
+(10, 3),      -- public government - proven importance
+(10,4)        -- public government - extended search
+
+delete from crt.participant_type_dossier_context
+
+insert into crt.participant_type_dossier_context(participant_type_id, dossier_context_id)
+select participant_type_id, dossier_context_id
+from @metaParticipantTypeDossierContexts
+
+
+------------------------------------------------------------------------------------------------
+--                                                                                            --
+-- DOSSIER_CONTEXT_RULE                                                                       --
+--                                                                                            --
+------------------------------------------------------------------------------------------------
+
+select *
+from crt.dossier_context_rule
+order by dossier_context_id, registration_type_id
+
+declare @metaDossierContextRules table(
+  dossier_context_id int,
+  registration_type_id int,
+  allow_for_deceased tinyint,
+  allow_for_living tinyint
+)
+insert into @metaDossierContextRules
+values
+(2,1,1,1),
+(2,2,1,1),
+(2,3,1,0),
+(2,4,1,0),
+(2,5,1,0),
+(2,6,1,0),
+(2,7,1,0),
+(2,8,1,0),
+(2,9,1,0),
+(2,10,1,0),
+(2,11,1,0),
+(2,12,1,1),
+(2,13,1,1),
+(2,14,1,1),
+(2,15,1,1),
+(2,16,1,1),  
+(2,17,1,1),
+(2,21,1,0),
+(2,22,1,0),
+(3,1,1,0),
+(3,2,1,0),
+(3,3,1,0),
+(3,4,1,0),
+(3,5,1,0),
+(3,6,1,0),
+(3,7,1,0),
+(3,8,1,0),
+(3,9,1,0),
+(3,10,1,0),
+(3,11,1,0),
+(3,12,1,1),
+(3,13,1,1),
+(3,14,1,1),
+(3,15,1,1),
+(3,16,1,1),
+(3,17,1,1),
+(3,21,1,0),
+(3,22,1,0),
+(3,23,1,0),
+(4,1,1,1),
+(4,2,1,1),
+(4,3,1,1),
+(4,4,1,1),
+(4,5,1,1),
+(4,6,1,1),
+(4,7,1,1),
+(4,8,1,1),
+(4,9,1,1),
+(4,10,1,1),
+(4,11,1,1),
+(4,12,1,1),
+(4,13,1,1),
+(4,14,1,1),
+(4,15,1,1),
+(4,16,1,1),
+(4,17,1,1),
+(4,21,1,0),
+(4,22,1,1),
+(4,23,1,0),
+(6,21,1,0),
+(6,22,1,1),
+(7,1,1,0),
+(7,2,1,0),
+(7,3,1,0),
+(7,4,1,0),
+(7,5,1,0),
+(7,6,1,0),
+(7,7,1,0),
+(7,8,1,0),
+(7,9,1,0),
+(7,10,1,0),
+(*,2,1,0),
+(*,6,1,0),
+(*,7,1,0),
 
 
 -- LEGAL ACT TYPES
@@ -195,4 +369,3 @@ delete from crt.participant_type_registration_type
 insert into crt.participant_type_registration_type(participant_type_id, registration_type_id)
 select participant_type_id, registration_type_id
 from @metaRegistrantLegalActTypes
-
